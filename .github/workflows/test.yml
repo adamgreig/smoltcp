@@ -1,0 +1,45 @@
+on:
+  push:
+    branches: [ staging, trying, master ]
+  pull_request:
+
+name: Test
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    continue-on-error: ${{ matrix.rust == "nightly" }}
+    strategy:
+      matrix:
+        rust:
+          - stable
+          - 1.28.0
+          - nightly
+
+        features:
+          # Test default features.
+          - default
+          # Test features chosen to be as orthogonal as possible.
+          - std ethernet phy-raw_socket proto-ipv6 socket-udp
+          - std ethernet phy-tap_interface proto-ipv6 socket-udp
+          - std ethernet proto-ipv4 proto-igmp socket-raw
+          - std ethernet proto-ipv4 socket-udp socket-tcp
+          - std ethernet proto-ipv4 proto-dhcpv4 socket-upd
+          - std ethernet proto-ipv6 socket-udp
+          - std ethernet proto-ipv6 socket-tcp
+          - std ethernet proto-ipv4 socket-icmp socket-tcp
+          - std ethernet proto-ipv6 socket-icmp socket-tcp
+          # Test features chosen to be as aggressive as possible.
+          - std ethernet proto-ipv4 proto-ipv6 socket-raw socket-udp socket-tcp socket-icmp
+          - alloc ethernet proto-ipv4 proto-ipv6 socket-raw socket-udp socket-tcp socket-icmp
+          - alloc proto-ipv4 proto-ipv6 socket-raw socket-udp socket-tcp socket-icmp
+          - ethernet proto-ipv6 proto-ipv6 proto-igmp proto-dhcpv4 socket-raw socket-udp socket-tcp socket-icmp
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: ${{ matrix.rust }}
+          override: true
+      - name: Run Tests
+        run: cargo test --no-default-features --features ${{ matrix.features }}
